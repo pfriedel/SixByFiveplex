@@ -13,6 +13,7 @@
       (Clear, Vertical,  Horizontal) comment are Doxygen complaints now
     2010-05-27 - V0.2 add double-buffer mode
     2010-08-18 - V0.9 Merge brightness and grayscale
+    2012-05-04 - Modified for various size charlieplexes.
 
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
