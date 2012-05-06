@@ -5,7 +5,7 @@
 #include <avr/pgmspace.h>  //AVR library for writing to ROM
 #include "Charliplexing.h"
 #include <Wire.h>
-#include "RTClib.h"
+#include "RealTimeClockDS1307.h"
 #include <stdio.h>
 
 //#include <String.h>;
@@ -60,14 +60,10 @@ prog_uchar* font[] = { letters_48, letters_49, letters_50, letters_51, letters_5
 uint16_t fontMin=48;
 uint16_t fontMax=90;
 
-// instantiate a RTC method
-RTC_DS1307 RTC;
-
 //--------------------------------------------------------------------------------
 void setup() {
   LedSign::Init(GRAYSCALE);  //Initializes the screen
   Wire.begin();
-  RTC.begin();
 
   Serial.begin(9600);
 
@@ -75,15 +71,10 @@ void setup() {
   pinMode(A1, INPUT); // A1
   digitalWrite(A0, HIGH); // enable the pullup on B0
   digitalWrite(A1, HIGH); // ditto
-
-  if (! RTC.isrunning()) {
-    // following line sets the RTC to the date & time this sketch was compiled
-    RTC.adjust(DateTime(__DATE__, __TIME__));
-  }
-
+  
   // let the clock seed our randomizer - seems to work
-  DateTime now = RTC.now();
-  randomSeed(now.unixtime());
+  RTC.readClock();
+  randomSeed(RTC.getSeconds());
 }
 
 void loop() {
@@ -91,7 +82,6 @@ void loop() {
   // in interrupt code otherwise.
 
   ReadButtons(); 
-
 
   int mode = random(4);
 
@@ -142,10 +132,9 @@ void loop() {
   }
 
   char clock_time[9] = "00:00:00";
-  DateTime now = RTC.now();
-  sprintf(clock_time, "%02d:%02d:%02d", now.hour(), now.minute(), now.second());
-//  Serial.println(clock_time);
-  
+  RTC.readClock();
+  sprintf(clock_time, "%02d:%02d:%02d", RTC.getHours(), RTC.getMinutes(), RTC.getSeconds());
+  Serial.println(clock_time);
   Banner(clock_time, 100);
 
 }
@@ -161,7 +150,30 @@ void ReadButtons() {
   Serial.println(button1State, DEC);
 
   if(button0State == 0) { // setting mode!
+    int setting_xpos;
     Banner("SET", 100);
+    
+    RTC.readClock();
+    
+    char hour[2];
+    itoa(RTC.getHours(), hour, 10);
+    
+    while(1) {
+      setting_xpos = Font_Draw(hour[0],0,0,7);
+      setting_xpos = Font_Draw(hour[1],(setting_xpos),0,7);
+      delay(100);
+      LedSign::Clear();
+      delay(100);
+      bool button0State = digitalRead(A0);
+      bool button1State = digitalRead(A1);
+      if(button0State == 0) {
+	break;
+      }
+      else if (button1State == 0) {
+	hour[1]++;
+      }
+    }
+    
   }
 
 }
