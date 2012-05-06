@@ -101,7 +101,7 @@ static bool initialized = false;
 
 /// Uncomment to set analog pin 5 high during interrupts, so that an
 /// oscilloscope can be used to measure the processor time taken by it
-#define MEASURE_ISR_TIME
+//#define MEASURE_ISR_TIME
 #ifdef MEASURE_ISR_TIME
 uint8_t statusPIN = 19;
 #endif
@@ -117,34 +117,7 @@ typedef struct LEDPosition {
  */
 // CHANGEME:
 
-// For the 20 LED plex
-// 15 16 17 18 19
-// 10 11 12 13 14
-//  5  6  7  8  9
-//  0  1  2  3  4
-//
-//char DisplayRows = 4;
-//char DisplayCols = 5;
-//const LEDPosition ledMap[20] = {
-//  {2, 6}, {3, 6}, {4, 6}, {5, 6}, {6, 5},
-//  {2, 5}, {3, 5}, {4, 5}, {5, 4}, {6, 4},
-//  {2, 4}, {3, 4}, {4, 3}, {5, 3}, {6, 3},
-//  {2, 3}, {3, 2}, {4, 2}, {5, 2}, {6, 2},
-//};
-
-// for the 6 LED plex:
-// 4 5 6
-// 1 2 3
-
-//char DisplayRows = 2;
-//char DisplayCols = 3;
-//const LEDPosition ledMap[6] = {
-//  {2, 4}, {3, 4}, {4, 3}, 
-//  {2, 3}, {3, 2}, {4, 2}, 
-//};
-
 // For the LoL Shield:
-
 //char DisplayRows = 9;
 //char DisplayCols = 14;
 //const LEDPosition ledMap[126] = {
@@ -160,13 +133,12 @@ typedef struct LEDPosition {
 //};
 //
 
-// For the 30 LED matrix
+// For the 30 LED matrix (actually inverted so that 0 is in the left corner)
 // 24 25 26 27 28 29
 // 18 19 20 21 22 23
 // 12 13 14 15 16 17 
 //  6  7  8  9 10 11
 //  0  1  2  3  4  5
-
 char DisplayRows = 5;
 char DisplayCols = 6;
 const LEDPosition ledMap[30] = {
@@ -360,7 +332,7 @@ void LedSign::Vertical(int x, int set) {
  */
 void LedSign::Set(uint8_t x, uint8_t y, uint8_t c)
 {
-  // FIXME: this will change for the small plex (maybe) (was 14, is now 5)
+  // CHANGEME: This used to reference the number of columns as an integer, but DisplayCols is known, so calculate against that.
     uint8_t pin_high = ledMap[x+y*DisplayCols].high;
     uint8_t pin_low  = ledMap[x+y*DisplayCols].low;
     // pin_low is directly the address in the led array (minus 2 because the 
@@ -452,9 +424,15 @@ void LedSign::SetBrightness(uint8_t brightness)
 /* -----------------------------------------------------------------  */
 /** The Interrupt code goes here !  
  */
+
+// All of the Port B calls are commented out so that D13 doesnt get pulled into
+// any of the "full array" updates (Clear/Horizontal/Vertical), which causes
+// some of the array to look different.  I know I don't need D13, but it's
+// helpful to see what the bootloader is doing.
+
 ISR(TIMER2_OVF_vect) {
         DDRD  = 0x0;
-        DDRB  = 0x0;
+	//        DDRB  = 0x0;
 #ifdef MEASURE_ISR_TIME
     digitalWrite(statusPIN, HIGH);
 #endif
@@ -478,32 +456,32 @@ ISR(TIMER2_OVF_vect) {
             DDRD  = _BV(cycle+2) | displayBuffer->pixels[page][cycle*2];
             PORTD =            displayBuffer->pixels[page][cycle*2];
 
-            DDRB  =            displayBuffer->pixels[page][cycle*2+1];
-            PORTB =            displayBuffer->pixels[page][cycle*2+1];
+//            DDRB  =            displayBuffer->pixels[page][cycle*2+1];
+//            PORTB =            displayBuffer->pixels[page][cycle*2+1];
         } else if (cycle < 12) {
             DDRD =             displayBuffer->pixels[page][cycle*2];
             PORTD =            displayBuffer->pixels[page][cycle*2];
 
-            DDRB  = _BV(cycle-6) | displayBuffer->pixels[page][cycle*2+1];
-            PORTB =            displayBuffer->pixels[page][cycle*2+1];      
+//            DDRB  = _BV(cycle-6) | displayBuffer->pixels[page][cycle*2+1];
+//            PORTB =            displayBuffer->pixels[page][cycle*2+1];      
         } else if (cycle < 18) {
             DDRD  = _BV(cycle+2-12) | displayBuffer->pixels[page][cycle*2];
             PORTD =            displayBuffer->pixels[page][cycle*2];
 
-            DDRB  =            displayBuffer->pixels[page][cycle*2+1];
-            PORTB =            displayBuffer->pixels[page][cycle*2+1];
+//            DDRB  =            displayBuffer->pixels[page][cycle*2+1];
+//            PORTB =            displayBuffer->pixels[page][cycle*2+1];
         } else {
             DDRD =             displayBuffer->pixels[page][cycle*2];
             PORTD =            displayBuffer->pixels[page][cycle*2];
 
-            DDRB  = _BV(cycle-6-12) | displayBuffer->pixels[page][cycle*2+1];
-            PORTB =            displayBuffer->pixels[page][cycle*2+1];      
+//            DDRB  = _BV(cycle-6-12) | displayBuffer->pixels[page][cycle*2+1];
+//            PORTB =            displayBuffer->pixels[page][cycle*2+1];      
         }
     } 
     else {
         // Turn everything off
         DDRD  = 0x0;
-        DDRB  = 0x0;
+	//        DDRB  = 0x0;
     }
 
     page++;
