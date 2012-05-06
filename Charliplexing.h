@@ -15,8 +15,8 @@
 #define DOUBLE_BUFFER 1
 #define GRAYSCALE     2
 
-#define DISPLAY_COLS 14     // Number of columns in the display
-#define DISPLAY_ROWS 9      // Number of rows in the display
+#define DISPLAY_COLS 6     // Number of columns in the display
+#define DISPLAY_ROWS 5      // Number of rows in the display
 #define SHADES 8 // Number of distinct shades to display, including black, i.e. OFF
 
 namespace LedSign
