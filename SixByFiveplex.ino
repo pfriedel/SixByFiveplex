@@ -10,8 +10,8 @@
 
 //#include <String.h>;
 
-#define B0 14;
-#define B1 15;
+#define button0 A0;
+#define button1 A1;
 
 //--------------------------------------------------------------------------------
 // define some bitmapped letters!  put them in program memory so you aren't using up valuable running memory.
@@ -69,75 +69,103 @@ void setup() {
   Wire.begin();
   RTC.begin();
 
-  pinMode(B0, INPUT); // A0
-  pinMode(B1, INPUT); // A1
-  digitalWrite(B0, HIGH); // enable the pullup on B0
-  digitalWrite(B1, HIGH); // ditto
+  Serial.begin(9600);
+
+  pinMode(A0, INPUT); // A0
+  pinMode(A1, INPUT); // A1
+  digitalWrite(A0, HIGH); // enable the pullup on B0
+  digitalWrite(A1, HIGH); // ditto
 
   if (! RTC.isrunning()) {
     // following line sets the RTC to the date & time this sketch was compiled
     RTC.adjust(DateTime(__DATE__, __TIME__));
   }
 
+  // let the clock seed our randomizer - seems to work
+  DateTime now = RTC.now();
+  randomSeed(now.unixtime());
 }
 
 void loop() {
+  // buttons are only read at the start of every cycle.  Too much mucking around
+  // in interrupt code otherwise.
 
-  // note - the clear and Horizontal methods also light D13.  I should turn off
-  // the DDRB functions in the micro-plex library bundled with this project
-  // since all my pings are on the PD interface.
+  ReadButtons(); 
 
-  // fill the screen in a nice glowing pulse.
-  for(int g=1; g<=7; g++) {
-    LedSign::Clear(g);
-    delay(50);
-  }
-  delay(1000);
-  for(int g=7; g>=0; g--) {
-    LedSign::Clear(g);
-    delay(50);
-  }
-  
-  for(int repeat=0; repeat<=5; repeat++) {
-    for(int x=0; x<=5; x++) {
-      LedSign::Vertical(x,7);
-      LedSign::Vertical(x-1,0);
-      delay(30);
+
+  int mode = random(4);
+
+  switch(mode) {
+  case 0:
+    // 8*25 = 200 + 300 second at the limit = half a second per up and down stroke.
+    for(int g=0; g<=7; g++) {
+      LedSign::Clear(g);
+      delay(25); // how long should it pause on each brightness?
     }
-    LedSign::Clear();
-  }
-
-
-  for(int repeat=0; repeat<=5; repeat++) {
+    delay(300); 
+    for(int g=7; g>=0; g--) {
+      LedSign::Clear(g);
+      delay(25);
+    }
+    delay(300); 
+    break;
+  case 1:
+    for(int repeat=0; repeat<=5; repeat++) {
+      for(int x=0; x<=5; x++) {
+	LedSign::Vertical(x,7);
+	LedSign::Vertical(x-1,0);
+	delay(30);
+      }
+      LedSign::Clear();
+    }
+    break;
+  case 2:
+    for(int repeat=0; repeat<=5; repeat++) {
+      for(int y=0; y<=4; y++) {
+	LedSign::Horizontal(y,7);
+	LedSign::Horizontal(y-1,0);
+	delay(30);
+      }
+      LedSign::Clear();
+    }
+    break;
+  case 3:
+    // lights every LED in sequence.
     for(int y=0; y<=4; y++) {
-      LedSign::Horizontal(y,7);
-      LedSign::Horizontal(y-1,0);
-      delay(80);
+      for(int x=0; x<=5; x++) {
+	LedSign::Set(x,y,7);
+	delay(30);
+	LedSign::Set(x,y,0);
+      }
     }
-    LedSign::Clear();
+    break;
   }
 
-  // lights every LED in sequence.
-  for(int y=0; y<=4; y++) {
-    for(int x=0; x<=5; x++) {
-      LedSign::Set(x,y,7);
-      delay(30);
-      LedSign::Set(x,y,0);
-    }
-  }
-
-  char time[9];
-
+  char clock_time[9] = "00:00:00";
   DateTime now = RTC.now();
+  sprintf(clock_time, "%02d:%02d:%02d", now.hour(), now.minute(), now.second());
+//  Serial.println(clock_time);
+  
+  Banner(clock_time, 100);
 
-  sprintf(time, "%02d:%02d:%02d", now.hour(), now.minute(), now.second());
-  Banner(time, 150);
 }
 
 //--------------------------------------------------------------------------------
 // functions
 
+void ReadButtons() {
+  bool button0State = digitalRead(A0);  
+  bool button1State = digitalRead(A1);
 
+  Serial.println(button0State, DEC);
+  Serial.println(button1State, DEC);
+
+  if(button0State == 0) { // setting mode!
+    Banner("SET", 100);
+  }
+
+}
+		 
 
 /** Writes an array to the display
  * @param str is the array to display
