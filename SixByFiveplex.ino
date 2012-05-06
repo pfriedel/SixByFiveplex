@@ -60,6 +60,8 @@ prog_uchar* font[] = { letters_48, letters_49, letters_50, letters_51, letters_5
 uint16_t fontMin=48;
 uint16_t fontMax=90;
 
+byte world[6][5][2]; // Create a double buffered world.
+
 //--------------------------------------------------------------------------------
 void setup() {
   LedSign::Init(GRAYSCALE);  //Initializes the screen
@@ -79,14 +81,38 @@ void setup() {
 
 void loop() {
   // buttons are only read at the start of every cycle.  Too much mucking around
-  // in interrupt code otherwise.
+  // in interrupt code otherwise.  I probably want to borrow a page from the
+  // WiseClock for setting time
 
   ReadButtons(); 
 
-  int mode = random(4);
+  int mode = random(5);
 
   switch(mode) {
   case 0:
+    // build the world
+    for(int y = 0; y<=4; y++) {
+      for(int x = 0; x<=5; x++) {
+	if(random(100) > 50)
+	  world[x][y][0] = 1;
+	else 
+	  world[x][y][0] = 0;
+	world[x][y][1]=0;
+      }
+    }
+    // display the world
+    for(int y = 0; y<=4; y++) {
+      for(int x = 0; x<=5; x++) {
+	if(world[x][y][0] == 1)
+	  LedSign::Set(x,y,7);
+	else
+	  LedSign::Set(x,y,0);
+      }
+    }
+    delay(1000);
+    break;
+    
+  case 1:
     // 8*25 = 200 + 300 second at the limit = half a second per up and down stroke.
     for(int g=0; g<=7; g++) {
       LedSign::Clear(g);
@@ -99,7 +125,7 @@ void loop() {
     }
     delay(300); 
     break;
-  case 1:
+  case 2:
     for(int repeat=0; repeat<=5; repeat++) {
       for(int x=0; x<=5; x++) {
 	LedSign::Vertical(x,7);
@@ -109,7 +135,7 @@ void loop() {
       LedSign::Clear();
     }
     break;
-  case 2:
+  case 3:
     for(int repeat=0; repeat<=5; repeat++) {
       for(int y=0; y<=4; y++) {
 	LedSign::Horizontal(y,7);
@@ -119,7 +145,7 @@ void loop() {
       LedSign::Clear();
     }
     break;
-  case 3:
+  case 4:
     // lights every LED in sequence.
     for(int y=0; y<=4; y++) {
       for(int x=0; x<=5; x++) {
@@ -131,9 +157,9 @@ void loop() {
     break;
   }
 
-  char clock_time[9] = "00:00:00";
+  char clock_time[6] = "00:00";
   RTC.readClock();
-  sprintf(clock_time, "%02d:%02d:%02d", RTC.getHours(), RTC.getMinutes(), RTC.getSeconds());
+  sprintf(clock_time, "%02d:%02d", RTC.getHours(), RTC.getMinutes());
   Serial.println(clock_time);
   Banner(clock_time, 100);
 
