@@ -10,6 +10,9 @@
 
 //#include <String.h>;
 
+#define B0 14;
+#define B1 15;
+
 //--------------------------------------------------------------------------------
 // define some bitmapped letters!  put them in program memory so you aren't using up valuable running memory.
 prog_uchar letters_48[] PROGMEM = /* 0 */ { 0,1, 0,2, 0,3, 1,0, 1,4, 2,1, 2,2, 2,3, 9,9 }; 
@@ -66,6 +69,11 @@ void setup() {
   Wire.begin();
   RTC.begin();
 
+  pinMode(B0, INPUT); // A0
+  pinMode(B1, INPUT); // A1
+  digitalWrite(B0, HIGH); // enable the pullup on B0
+  digitalWrite(B1, HIGH); // ditto
+
   if (! RTC.isrunning()) {
     // following line sets the RTC to the date & time this sketch was compiled
     RTC.adjust(DateTime(__DATE__, __TIME__));
@@ -80,34 +88,34 @@ void loop() {
   // since all my pings are on the PD interface.
 
   // fill the screen in a nice glowing pulse.
-//  for(int g=1; g<=7; g++) {
-//    LedSign::Clear(g);
-//    delay(50);
-//  }
-//  delay(1000);
-//  for(int g=7; g>=0; g--) {
-//    LedSign::Clear(g);
-//    delay(50);
-//  }
+  for(int g=1; g<=7; g++) {
+    LedSign::Clear(g);
+    delay(50);
+  }
+  delay(1000);
+  for(int g=7; g>=0; g--) {
+    LedSign::Clear(g);
+    delay(50);
+  }
   
-//  for(int repeat=0; repeat<=5; repeat++) {
-//    for(int x=0; x<=5; x++) {
-//      LedSign::Vertical(x,7);
-//      LedSign::Vertical(x-1,0);
-//      delay(30);
-//    }
-//    LedSign::Clear();
-//  }
-//
-//
-//  for(int repeat=0; repeat<=5; repeat++) {
-//    for(int y=0; y<=4; y++) {
-//      LedSign::Horizontal(y,7);
-//      LedSign::Horizontal(y-1,0);
-//      delay(80);
-//    }
-//    LedSign::Clear();
-//  }
+  for(int repeat=0; repeat<=5; repeat++) {
+    for(int x=0; x<=5; x++) {
+      LedSign::Vertical(x,7);
+      LedSign::Vertical(x-1,0);
+      delay(30);
+    }
+    LedSign::Clear();
+  }
+
+
+  for(int repeat=0; repeat<=5; repeat++) {
+    for(int y=0; y<=4; y++) {
+      LedSign::Horizontal(y,7);
+      LedSign::Horizontal(y-1,0);
+      delay(80);
+    }
+    LedSign::Clear();
+  }
 
   // lights every LED in sequence.
   for(int y=0; y<=4; y++) {
