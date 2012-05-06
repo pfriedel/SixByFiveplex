@@ -298,7 +298,7 @@ void LedSign::Flip(bool blocking)
  */
 void LedSign::Clear(int set) {
     for(int x=0;x<DisplayCols;x++)  
-        for(int y=0;y<DisplayCols;y++) 
+        for(int y=0;y<DisplayRows;y++) 
             Set(x,y,set);
 }
 
