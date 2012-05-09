@@ -7,58 +7,15 @@
 #include <Wire.h>
 #include "RealTimeClockDS1307.h"
 #include <stdio.h>
+#include "tinyfont.h" // font is hiding in here.
 
 //#include <String.h>;
 
 #define button0 A0;
 #define button1 A1;
 
-//--------------------------------------------------------------------------------
-// define some bitmapped letters!  put them in program memory so you aren't using up valuable running memory.
-prog_uchar letters_48[] PROGMEM = /* 0 */ { 0,1, 0,2, 0,3, 1,0, 1,4, 2,1, 2,2, 2,3, 9,9 }; 
-prog_uchar letters_49[] PROGMEM = /* 1 */ { 0,0, 0,1, 0,2, 0,3, 0,4, 9,9 }; 
-prog_uchar letters_50[] PROGMEM = /* 2 */ { 0,0, 0,3, 0,4, 1,0, 1,2, 1,4, 2,1, 2,4, 9,9 }; 
-prog_uchar letters_51[] PROGMEM = /* 3 */ { 0,0, 0,4, 1,0, 1,2, 1,4, 2,0, 2,1, 2,2, 2,3, 2,3, 9,9 }; 
-prog_uchar letters_52[] PROGMEM = /* 4 */ { 0,0, 0,1, 0,2, 1,2, 2,1, 2,2, 2,3, 2,4, 9,9 }; 
-prog_uchar letters_53[] PROGMEM = /* 5 */ { 0,0, 0,1, 0,2, 0,4, 1,0, 1,2, 1,4, 2,0, 2,2, 2,3, 9,9 }; 
-prog_uchar letters_54[] PROGMEM = /* 6 */ { 0,1, 0,2, 0,3, 1,0, 1,2, 1,4, 2,0, 2,2, 2,3, 9,9 }; 
-prog_uchar letters_55[] PROGMEM = /* 7 */ { 0,0, 0,3, 0,4, 1,0, 1,2, 2,0, 2,1, 9,9 }; 
-prog_uchar letters_56[] PROGMEM = /* 8 */ { 0,0, 0,1, 0,3, 0,4, 1,0, 1,2, 1,4, 2,0, 2,1, 2,3, 2,4, 9,9 }; 
-prog_uchar letters_57[] PROGMEM = /* 9 */ { 0,1, 0,2, 0,4, 1,0, 1,2, 1,4, 2,1, 2,2, 2,3, 9,9 }; 
-prog_uchar letters_58[] PROGMEM = /* : */ { 0,1, 0,3, 9,9 }; 
-prog_uchar letters_65[] PROGMEM = /* A */ { 0,1, 0,2, 0,3, 0,4, 1,0, 1,2, 2,0, 2,2, 3,1, 3,2, 3,3, 3,4, 9,9 }; 
-prog_uchar letters_66[] PROGMEM = /* B */ { 0,0, 0,1, 0,2, 0,3, 0,4, 1,0, 1,2, 1,4, 2,0, 2,2, 2,4, 3,1, 3,3, 9,9 }; 
-prog_uchar letters_67[] PROGMEM = /* C */ { 0,1, 0,2, 0,3, 1,0, 1,4, 2,0, 2,4, 3,1, 3,3, 9,9 }; 
-prog_uchar letters_68[] PROGMEM = /* D */ { 0,0, 0,1, 0,2, 0,3, 0,4, 1,0, 1,4, 2,0, 2,4, 3,1, 3,2, 3,3, 9,9 }; 
-prog_uchar letters_69[] PROGMEM = /* E */ { 0,0, 0,1, 0,2, 0,3, 0,4, 1,0, 1,2, 1,4, 2,0, 2,2, 2,4, 3,0, 3,4, 9,9 }; 
-prog_uchar letters_70[] PROGMEM = /* F */ { 0,0, 0,1, 0,2, 0,3, 0,4, 1,0, 1,2, 2,0, 2,2, 3,0, 9,9 }; 
-prog_uchar letters_71[] PROGMEM = /* G */ { 0,1, 0,2, 0,3, 1,0, 1,4, 2,0, 2,2, 2,4, 3,0, 3,2, 3,3, 9,9 }; 
-prog_uchar letters_72[] PROGMEM = /* H */ { 0,0, 0,1, 0,2, 0,3, 0,4, 1,2, 2,2, 3,0, 3,1, 3,2, 3,3, 3,4, 9,9 }; 
-prog_uchar letters_73[] PROGMEM = /* I */ { 0,0, 0,4, 1,0, 1,1, 1,2, 1,3, 1,4, 2,0, 2,4, 9,9 }; 
-prog_uchar letters_74[] PROGMEM = /* J */ { 0,3, 1,4, 2,4, 3,0, 3,1, 3,2, 3,3, 9,9 }; 
-prog_uchar letters_75[] PROGMEM = /* K */ { 0,0, 0,1, 0,2, 0,3, 0,4, 1,2, 2,1, 2,3, 3,0, 3,4, 9,9 }; 
-prog_uchar letters_76[] PROGMEM = /* L */ { 0,0, 0,1, 0,2, 0,3, 0,4, 1,4, 2,4, 9,9 }; 
-prog_uchar letters_77[] PROGMEM = /* M */ { 0,0, 0,1, 0,2, 0,3, 0,4, 1,1, 2,2, 3,1, 4,0, 4,1, 4,2, 4,3, 4,4, 9,9  }; 
-prog_uchar letters_78[] PROGMEM = /* N */ { 0,0, 0,1, 0,2, 0,3, 0,4, 1,1, 2,2, 3,3, 4,0, 4,1, 4,2, 4,3, 4,4, 9,9 }; 
-prog_uchar letters_79[] PROGMEM = /* O */ { 0,1, 0,2, 0,3, 1,0, 1,4, 2,0, 2,4, 3,1, 3,2, 3,3, 9,9 }; 
-prog_uchar letters_80[] PROGMEM = /* P */ { 0,0, 0,1, 0,2, 0,3, 0,4, 1,0, 1,2, 2,0, 2,2, 3,1, 9,9 }; 
-prog_uchar letters_81[] PROGMEM = /* Q */ { 0,1, 0,2, 0,3, 1,0, 1,4, 2,0, 2,3, 2,4, 3,1, 3,2, 3,3, 3,4, 9,9 }; 
-prog_uchar letters_82[] PROGMEM = /* R */ { 0,0, 0,1, 0,2, 0,3, 0,4, 1,0, 1,2, 2,0, 2,2, 2,3, 3,1, 3,4, 9,9 }; 
-prog_uchar letters_83[] PROGMEM = /* S */ { 0,1, 0,4, 1,0, 1,2, 1,4, 2,0, 2,2, 2,4, 3,0, 3,3, 9,9 }; 
-prog_uchar letters_84[] PROGMEM = /* T */ { 0,0, 1,0, 1,1, 1,2, 1,3, 1,4, 2,0, 9,9 }; 
-prog_uchar letters_85[] PROGMEM = /* U */ { 0,0, 0,1, 0,2, 0,3, 1,4, 2,4, 3,0, 3,1, 3,2, 3,3, 9,9 }; 
-prog_uchar letters_86[] PROGMEM = /* V */ { 0,0, 0,1, 1,2, 1,3, 2,4, 3,2, 3,3, 4,0, 4,1, 9,9 }; 
-prog_uchar letters_87[] PROGMEM = /* W */ { 0,0, 0,1, 0,2, 0,3, 1,4, 2,0, 2,1, 2,2, 2,3, 3,4, 4,0, 4,1, 4,2, 4,3, 9,9 }; 
-prog_uchar letters_88[] PROGMEM = /* X */ { 0,0, 0,4, 1,1, 1,3, 2,2, 3,1, 3,3, 4,0, 4,4, 9,9 }; 
-prog_uchar letters_89[] PROGMEM = /* Y */ { 0,0, 1,1, 2,2, 2,3, 2,4, 3,1, 4,0, 9,9 }; 
-prog_uchar letters_90[] PROGMEM = /* Z */ { 0,0, 0,3, 0,4, 1,0, 1,2, 1,4, 2,0, 2,1, 2,4, 9,9 }; 
-
-// Basically an ASCII lookup table
-prog_uchar* font[] = { letters_48, letters_49, letters_50, letters_51, letters_52, letters_53, letters_54, letters_55, letters_56, letters_57, letters_58, 0, 0, 0, 0, 0, 0, letters_65, letters_66, letters_67, letters_68, letters_69, letters_70, letters_71, letters_72, letters_73, letters_74, letters_75, letters_76, letters_77, letters_78, letters_79, letters_80, letters_81, letters_82, letters_83, letters_84, letters_85, letters_86, letters_87, letters_88, letters_89, letters_90 };
-
-// Define the beginning and end of your available glyphs
-uint16_t fontMin=48;
-uint16_t fontMax=90;
+// are your LEDs a little obnoxious at full brightness?
+int MAXBRIGHT=4;
 
 byte world[6][5][2]; // Create a double buffered world.
 
@@ -80,16 +37,48 @@ void setup() {
 }
 
 void loop() {
+  unsigned long now = millis();
+
   // buttons are only read at the start of every cycle.  Too much mucking around
   // in interrupt code otherwise.  I probably want to borrow a page from the
   // WiseClock for setting time
 
-  ReadButtons(); 
-
-  int mode = random(5);
-
-  switch(mode) {
+  //  ReadButtons(); 
+  switch(random(6)) {
+    // make it rain!
   case 0:
+    while(1) {
+      unsigned long later = millis();
+      // move everything down one row
+      for(int y=0; y<=4; y++) {
+	for(int x=0; x<=5; x++) {
+	  if(world[x][y][0] > 0) { // if there's a value in the current frame, copy it to the next frame, 1 row down
+	    world[x][y+1][1] = world[x][y][0]; 
+	  }
+	  else { // otherwise blank the LED in the next frame.
+	    world[x][y+1][1] = 0;
+	  }
+	}
+      }
+      // fill in the now vacant top row with random lights
+      for(int x = 0; x<=5; x++) {
+	if(random(100) > 50) { 
+	  int brightness = random(MAXBRIGHT); // gives it some texture.
+	  world[x][0][1] = brightness;
+	}
+	else {
+	  world[x][0][1] = 0;
+	}
+      }
+      // draw the changes - after this world[0] will be identical to world[1], so keep that in mind.
+      fade_to_next_frame(20);
+      if(later > (now+5000)) { // get out of rain eventually.
+	break;
+      }
+    }
+    break;
+    // the random initial seed for Life
+  case 1:
     // build the world
     for(int y = 0; y<=4; y++) {
       for(int x = 0; x<=5; x++) {
@@ -104,52 +93,54 @@ void loop() {
     for(int y = 0; y<=4; y++) {
       for(int x = 0; x<=5; x++) {
 	if(world[x][y][0] == 1)
-	  LedSign::Set(x,y,7);
+	  LedSign::Set(x,y,MAXBRIGHT);
 	else
 	  LedSign::Set(x,y,0);
       }
     }
     delay(1000);
     break;
-    
-  case 1:
+    // a nice screen filling pulse
+  case 2:
     // 8*25 = 200 + 300 second at the limit = half a second per up and down stroke.
-    for(int g=0; g<=7; g++) {
+    for(int g=0; g<=MAXBRIGHT; g++) {
       LedSign::Clear(g);
       delay(25); // how long should it pause on each brightness?
     }
     delay(300); 
-    for(int g=7; g>=0; g--) {
+    for(int g=MAXBRIGHT; g>=0; g--) {
       LedSign::Clear(g);
       delay(25);
     }
     delay(300); 
     break;
-  case 2:
+    // vertical sweeps
+  case 3:
     for(int repeat=0; repeat<=5; repeat++) {
       for(int x=0; x<=5; x++) {
-	LedSign::Vertical(x,7);
+	LedSign::Vertical(x,MAXBRIGHT);
 	LedSign::Vertical(x-1,0);
 	delay(30);
       }
       LedSign::Clear();
     }
     break;
-  case 3:
+    // horizontal sweeps
+  case 4:
     for(int repeat=0; repeat<=5; repeat++) {
       for(int y=0; y<=4; y++) {
-	LedSign::Horizontal(y,7);
+	LedSign::Horizontal(y,MAXBRIGHT);
 	LedSign::Horizontal(y-1,0);
-	delay(30);
+	delay(50);
       }
       LedSign::Clear();
     }
     break;
-  case 4:
     // lights every LED in sequence.
+  case 5:
     for(int y=0; y<=4; y++) {
       for(int x=0; x<=5; x++) {
-	LedSign::Set(x,y,7);
+	LedSign::Set(x,y,MAXBRIGHT);
 	delay(30);
 	LedSign::Set(x,y,0);
       }
@@ -167,6 +158,42 @@ void loop() {
 
 //--------------------------------------------------------------------------------
 // functions
+
+
+// Theory of operation: Bring world[x][y][0] towards world[x][y][1] and draw it.  When nothing changes, break out of the loop.
+void fade_to_next_frame(int speed) {
+  char x,y, changes;
+
+  while(1) {
+    changes = 0;
+    for(y=0; y<=4; y++) {
+      for(x=0; x<=5; x++) {
+	if( world[x][y][0] < world[x][y][1] ) {
+	  world[x][y][0]++;
+	  changes++;
+	}
+	if( world[x][y][0] > world[x][y][1] ) {
+	  world[x][y][0]--;
+	  changes++;
+	}
+      }
+    }
+    draw_frame();
+    delay(speed); // give those changes a second to apply - LedSign's interrupt driven nature means otherwise the whole update could happen between polling intervals and it would just jump from frame to the next frame.
+    if( changes == 0 ) {
+      break;
+    }
+  }
+}
+
+void draw_frame (void) {
+  char x, y;
+  for(y=0; y<=4; y++) {
+    for(x=0; x<=5; x++) {
+      LedSign::Set(x,y,world[x][y][0]);
+    }
+  }
+}
 
 void ReadButtons() {
   bool button0State = digitalRead(A0);  
@@ -240,7 +267,7 @@ void Banner ( char* str, int speed ) {
     LedSign::Clear(); 
     // walk through the array, drawing letters where they belong.
     for(int i=0; i<length; i++) { 
-      x2 = Font_Draw(str[i],x,0,7);
+      x2 = Font_Draw(str[i],x,0,MAXBRIGHT);
       // sets the new xpos based off of the old xpos + the width of the 
       // current character.
       x+=x2;
