@@ -37,120 +37,38 @@ void setup() {
 }
 
 void loop() {
-  unsigned long now = millis();
 
   // buttons are only read at the start of every cycle.  Too much mucking around
   // in interrupt code otherwise.  I probably want to borrow a page from the
   // WiseClock for setting time
 
+  //clear the current world of whatever had been in it.
+  for(int y=0; y<=4; y++) { for(int x=0; x<=5; x++) { world[x][y][0] = 0; world[x][y][1] = 0; } }
+
+  unsigned long now=millis();
+  
   //  ReadButtons(); 
-  switch(random(6)) {
-    // make it rain!
+  switch(random(4)) {
   case 0:
-    while(1) {
-      unsigned long later = millis();
-      // move everything down one row
-      for(int y=0; y<=4; y++) {
-	for(int x=0; x<=5; x++) {
-	  if(world[x][y][0] > 0) { // if there's a value in the current frame, copy it to the next frame, 1 row down
-	    world[x][y+1][1] = world[x][y][0]; 
-	  }
-	  else { // otherwise blank the LED in the next frame.
-	    world[x][y+1][1] = 0;
-	  }
-	}
-      }
-      // fill in the now vacant top row with random lights
-      for(int x = 0; x<=5; x++) {
-	if(random(100) > 50) { 
-	  int brightness = random(MAXBRIGHT); // gives it some texture.
-	  world[x][0][1] = brightness;
-	}
-	else {
-	  world[x][0][1] = 0;
-	}
-      }
-      // draw the changes - after this world[0] will be identical to world[1], so keep that in mind.
-      fade_to_next_frame(20);
-      if(later > (now+5000)) { // get out of rain eventually.
-	break;
-      }
-    }
+    Rain(now,5000);
     break;
-    // the random initial seed for Life
   case 1:
-    // build the world
-    for(int y = 0; y<=4; y++) {
-      for(int x = 0; x<=5; x++) {
-	if(random(100) > 50)
-	  world[x][y][0] = 1;
-	else 
-	  world[x][y][0] = 0;
-	world[x][y][1]=0;
-      }
-    }
-    // display the world
-    for(int y = 0; y<=4; y++) {
-      for(int x = 0; x<=5; x++) {
-	if(world[x][y][0] == 1)
-	  LedSign::Set(x,y,MAXBRIGHT);
-	else
-	  LedSign::Set(x,y,0);
-      }
-    }
-    delay(1000);
+    Breathe(now,5000);
     break;
-    // a nice screen filling pulse
   case 2:
-    // 8*25 = 200 + 300 second at the limit = half a second per up and down stroke.
-    for(int g=0; g<=MAXBRIGHT; g++) {
-      LedSign::Clear(g);
-      delay(25); // how long should it pause on each brightness?
-    }
-    delay(300); 
-    for(int g=MAXBRIGHT; g>=0; g--) {
-      LedSign::Clear(g);
-      delay(25);
-    }
-    delay(300); 
+    VertSweeps(now,5000);
     break;
-    // vertical sweeps
   case 3:
-    for(int repeat=0; repeat<=5; repeat++) {
-      for(int x=0; x<=5; x++) {
-	LedSign::Vertical(x,MAXBRIGHT);
-	LedSign::Vertical(x-1,0);
-	delay(30);
-      }
-      LedSign::Clear();
-    }
+    HorizSweeps(now,5000);
     break;
-    // horizontal sweeps
   case 4:
-    for(int repeat=0; repeat<=5; repeat++) {
-      for(int y=0; y<=4; y++) {
-	LedSign::Horizontal(y,MAXBRIGHT);
-	LedSign::Horizontal(y-1,0);
-	delay(50);
-      }
-      LedSign::Clear();
-    }
-    break;
-    // lights every LED in sequence.
-  case 5:
-    for(int y=0; y<=4; y++) {
-      for(int x=0; x<=5; x++) {
-	LedSign::Set(x,y,MAXBRIGHT);
-	delay(30);
-	LedSign::Set(x,y,0);
-      }
-    }
+    LightAll(now,5000);
     break;
   }
 
   char clock_time[6] = "00:00";
   RTC.readClock();
-  sprintf(clock_time, "%02d:%02d", RTC.getHours(), RTC.getMinutes());
+  sprintf(clock_time, "%2d:%02d", RTC.getHours(), RTC.getMinutes());
   Serial.println(clock_time);
   Banner(clock_time, 100);
 
@@ -159,6 +77,106 @@ void loop() {
 //--------------------------------------------------------------------------------
 // functions
 
+void LightAll (unsigned long now, unsigned long runtime) {
+  while(1) {
+    for(int y=0; y<=4; y++) {
+      for(int x=0; x<=5; x++) {
+	if(millis() > (now+runtime)) {
+	  return;
+	}
+	world[x][y][1] = MAXBRIGHT;
+	fade_to_next_frame(30);
+	world[x][y][1] = 0;
+      }
+    }
+  }
+}
+
+void VertSweeps(unsigned long now, unsigned long runtime) {
+  while(1) {
+    for(int x=0; x<=6; x++) {
+      for(int y=0; y<=4; y++) {
+	if(millis() > (now+runtime)) {
+	  return;
+	}
+	world[x][y][1] = MAXBRIGHT;
+	world[x-1][y][1]=0;
+      }
+      fade_to_next_frame(30);
+    }
+  }
+}
+
+void HorizSweeps(unsigned long now, unsigned long runtime) {
+  while(1) {
+    for(int y=0; y<=4; y++) {
+      for(int x=0; x<=6; x++) {
+	if(millis() > (now+runtime)) {
+	  return;
+	}
+	world[x][y][1] = MAXBRIGHT;
+	world[x][y-1][1] = 0;
+      }
+      fade_to_next_frame(30);
+    }
+  }
+}
+
+void Rain(unsigned long now, unsigned long runtime) {
+  while(1) {
+    if(millis() > (now+runtime)) { // get out of rain eventually.
+      return;
+    }
+    // move everything down one row
+    for(int y=0; y<=4; y++) {
+      for(int x=0; x<=5; x++) {
+	if(world[x][y][0] > 0) { // if there's a value in the current frame, copy it to the next frame, 1 row down
+	  world[x][y+1][1] = world[x][y][0]; 
+	}
+	else { // otherwise blank the LED in the next frame.
+	  world[x][y+1][1] = 0;
+	}
+      }
+    }
+    // fill in the now vacant top row with random lights
+    for(int x = 0; x<=5; x++) {
+      if(random(100) > 50) { 
+	world[x][0][1] = random(MAXBRIGHT);
+      }
+      else {
+	world[x][0][1] = 0;
+      }
+    }
+    // draw the changes - after this world[0] will be identical to world[1], so keep that in mind.
+    fade_to_next_frame(20);
+  }
+}
+
+void Breathe(unsigned long now, unsigned long runtime) {
+  while(1) {
+    if(millis() > (now+runtime)) {
+      return;
+    }
+    for(int y=0; y<=4; y++) { for(int x=0; x<=5; x++) { world[x][y][1] = MAXBRIGHT; } }
+    if(millis() > (now+runtime)) {
+      return;
+    }
+    
+    fade_to_next_frame(35);
+    delay(300); 
+    if(millis() > (now+runtime)) {
+      return;
+    }
+    
+    for(int y=0; y<=4; y++) { for(int x=0; x<=5; x++) { world[x][y][1] = 0; } }
+    
+    fade_to_next_frame(35);
+    if(millis() > (now+runtime)) {
+      return;
+    }
+    delay(300); 
+  }
+}
 
 // Theory of operation: Bring world[x][y][0] towards world[x][y][1] and draw it.  When nothing changes, break out of the loop.
 void fade_to_next_frame(int speed) {
@@ -179,13 +197,18 @@ void fade_to_next_frame(int speed) {
       }
     }
     draw_frame();
-    delay(speed); // give those changes a second to apply - LedSign's interrupt driven nature means otherwise the whole update could happen between polling intervals and it would just jump from frame to the next frame.
+
+    // give those changes a second to apply - LedSign's interrupt driven nature
+    // means otherwise the whole update could happen between polling intervals
+    // and it would just jump from frame to the next frame.
+    delay(speed); 
     if( changes == 0 ) {
       break;
     }
   }
 }
 
+// Draws the current data in world[0].
 void draw_frame (void) {
   char x, y;
   for(y=0; y<=4; y++) {
