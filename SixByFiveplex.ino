@@ -17,7 +17,7 @@
 #define ROWS 5 // usually y
 
 // are your LEDs a little obnoxious at full brightness?
-#define MAXBRIGHT 7
+int MAXBRIGHT=7;
 
 byte world[COLS][ROWS][2]; // Create a double buffered world.
 
@@ -63,8 +63,9 @@ void setup() {
 void loop() {
   // check SET button;
   if (digitalRead(SET_BUTTON_PIN) == 0) {
-    if(!isSettingTime) 
-      Banner("SET", 100);
+//    if(!isSettingTime) {
+//      Banner("SET", 100);
+//    }
     // "Set time" button was pressed;
     processSetButton();
   }
@@ -86,6 +87,14 @@ void loop() {
   
   // return the main mode if no button was pressed for 5 seconds;
   if (isSettingTime) {
+//    for(int repeat=0; repeat<2; repeat++) { // 2 flashes to ack going back to normal mode
+//      for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = MAXBRIGHT; } }
+//      fade_to_next_frame(15);
+//      delay(300); 
+//      for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = 0; } }
+//      fade_to_next_frame(15);
+//    }
+
     // just finished setting up the time;
     isSettingTime = false;
     
@@ -182,14 +191,20 @@ void processSetButton() {
     LedSign::Clear();
     itoa(hours,text,10);
     x = Font_Draw(text[0],0,0,MAXBRIGHT);
-    Font_Draw(text[1],x-1,0,MAXBRIGHT);
+    if(x>=3)
+      Font_Draw(text[1],x-1,0,MAXBRIGHT);
+    else
+      Font_Draw(text[1],x,0,MAXBRIGHT);
     delay(10);
   }
   else {
     LedSign::Clear();
     itoa(minutes,text,10);
     x = Font_Draw(text[0],0,0,MAXBRIGHT);
-    Font_Draw(text[1],x-1,0,MAXBRIGHT);
+    if(x>=3)
+      Font_Draw(text[1],x-1,0,MAXBRIGHT);
+    else
+      Font_Draw(text[1],x,0,MAXBRIGHT);
     delay(10);
   }
 }
@@ -221,14 +236,20 @@ void processIncButton() {
     LedSign::Clear();
     itoa(hours,text,10);
     x = Font_Draw(text[0],0,0,MAXBRIGHT);
-    Font_Draw(text[1],x-1,0,MAXBRIGHT);
+    if(x>=3)
+      Font_Draw(text[1],x-1,0,MAXBRIGHT);
+    else
+      Font_Draw(text[1],x,0,MAXBRIGHT);
     delay(10);
   }
   else {
     LedSign::Clear();
     itoa(minutes,text,10);
     x = Font_Draw(text[0],0,0,MAXBRIGHT);
-    Font_Draw(text[1],x-1,0,MAXBRIGHT);
+    if(x>=3)
+      Font_Draw(text[1],x-1,0,MAXBRIGHT);
+    else
+      Font_Draw(text[1],x,0,MAXBRIGHT);
     delay(10);
   }
 }
