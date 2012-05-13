@@ -11,76 +11,233 @@
 
 //#include <String.h>;
 
-#define button0 A0;
-#define button1 A1;
+#define SET_BUTTON_PIN 14
+#define INC_BUTTON_PIN 15
+
+#define COLS 6 // usually x
+#define ROWS 5 // usually y
 
 // are your LEDs a little obnoxious at full brightness?
 int MAXBRIGHT=4;
 
-byte world[6][5][2]; // Create a double buffered world.
+byte world[COLS][ROWS][2]; // Create a double buffered world.
+
+int hours;
+int minutes;
+
+boolean isSettingHours   = true;
+boolean isSettingMinutes = false;
+
+#define BOUNCE_TIME_BUTTON  300   // bounce time in ms for the menu button;
+
+// last time a button was pushed; used for debouncing;
+volatile unsigned long lastButtonTime = 0;
+
+// indicates that one of the menu options (0..MAX_OPTION) is currently displayed;
+boolean isSettingTime = false;
+
+// when alternating between displaying quotes and time, start with the time;
+boolean isDisplayingTime  = true;
+boolean isDisplayingQuote = false;
+
+// buffer for time display;
+char timeBuffer[]   = "12:45";
 
 //--------------------------------------------------------------------------------
 void setup() {
   LedSign::Init(GRAYSCALE);  //Initializes the screen
   Wire.begin();
 
-  Serial.begin(9600);
+  //  Serial.begin(9600);
 
-  pinMode(A0, INPUT); // A0
-  pinMode(A1, INPUT); // A1
-  digitalWrite(A0, HIGH); // enable the pullup on B0
-  digitalWrite(A1, HIGH); // ditto
+  pinMode(SET_BUTTON_PIN, INPUT); // A0
+  pinMode(INC_BUTTON_PIN, INPUT); // A1
+  digitalWrite(SET_BUTTON_PIN, HIGH); // enable the pullup on B0
+  digitalWrite(INC_BUTTON_PIN, HIGH); // ditto
   
   // let the clock seed our randomizer - seems to work
   RTC.readClock();
   randomSeed(RTC.getSeconds());
+  updateTimeBuffer();
 }
 
 void loop() {
-
-  // buttons are only read at the start of every cycle.  Too much mucking around
-  // in interrupt code otherwise.  I probably want to borrow a page from the
-  // WiseClock for setting time
-
-  //clear the current world of whatever had been in it.
-  for(int y=0; y<=4; y++) { for(int x=0; x<=5; x++) { world[x][y][0] = 0; world[x][y][1] = 0; } }
-
-  unsigned long now=millis();
-  
-  //  ReadButtons(); 
-  switch(random(4)) {
-  case 0:
-    Rain(now,5000);
-    break;
-  case 1:
-    Breathe(now,5000);
-    break;
-  case 2:
-    VertSweeps(now,5000);
-    break;
-  case 3:
-    HorizSweeps(now,5000);
-    break;
-  case 4:
-    LightAll(now,5000);
-    break;
+  // check SET button;
+  if (digitalRead(SET_BUTTON_PIN) == 0) {
+    if(!isSettingTime) 
+      Banner("SET", 100);
+    // "Set time" button was pressed;
+    processSetButton();
   }
-
-  char clock_time[6] = "00:00";
-  RTC.readClock();
-  sprintf(clock_time, "%2d:%02d", RTC.getHours(), RTC.getMinutes());
-  Serial.println(clock_time);
-  Banner(clock_time, 100);
-
+  
+  // check INC button;
+  if (isSettingTime) {
+    if (digitalRead(INC_BUTTON_PIN) == 0) {
+      // "Inc time" button was pressed;
+      processIncButton();
+      // save the new time;
+      setTime();
+    }
+  }
+  
+  // display the menu option for 5 seconds after menu button was pressed;
+  if ((lastButtonTime > 0) && (millis() - lastButtonTime < 5000)) {
+    return;
+  }
+  
+  // return the main mode if no button was pressed for 5 seconds;
+  if (isSettingTime) {
+    // just finished setting up the time;
+    isSettingTime = false;
+    
+    updateTimeBuffer();
+    
+    resetDisplay();
+  }
+  else {
+    //clear the current world of whatever had been in it.
+    for(int y = 0; y < ROWS; y++) { for(int x = 0; x < COLS; x++) { world[x][y][0] = 0; world[x][y][1] = 0; } }
+    
+    unsigned long now=millis();
+    
+    //  ReadButtons(); 
+    switch(random(4)) {
+    case 0:
+      Rain(now,5000);
+      break;
+    case 1:
+      Breathe(now,5000);
+      break;
+    case 2:
+      VertSweeps(now,5000);
+      break;
+    case 3:
+      HorizSweeps(now,5000);
+      break;
+    case 4:
+      LightAll(now,5000);
+      break;
+    }
+    
+    Banner(timeBuffer, 100);
+  }
 }
 
 //--------------------------------------------------------------------------------
 // functions
 
+void setTime() {
+  
+  RTC.switchTo24h();
+  RTC.stop();
+  RTC.setSeconds(0);
+  RTC.setMinutes(minutes);
+  RTC.setHours(hours);
+  // dummy values, since they are not displayed anyway;
+  RTC.setDayOfWeek(1);
+  RTC.setDate(1);
+  RTC.setMonth(1);
+  RTC.setYear(9);
+  RTC.setClock(); // important!  Without this, all of the prior settings are lost by the next getter
+  RTC.start();
+}
+
+void updateTimeBuffer() {
+  RTC.readClock();
+  minutes = RTC.getMinutes();
+  hours   = RTC.getHours();
+
+  // build the string containing formatted time;
+  sprintf(timeBuffer, "%2d:%02d", hours, minutes);
+}
+
+void resetDisplay() {
+  for(int y = 0; y < ROWS; y++) {
+    for(int x = 0; x < COLS; x++) {
+      world[x][y][0] = 0;
+      world[x][y][1] = 0;
+    }
+  }
+}
+
+void processSetButton() {
+  if((hours > 23) or (minutes > 59)) {
+    updateTimeBuffer();
+  }
+
+  // debouncing;
+  if (abs(millis() - lastButtonTime) < BOUNCE_TIME_BUTTON)
+    return;
+
+  lastButtonTime = millis();
+
+  isSettingTime    = true;
+  isSettingHours   = !isSettingHours;
+  isSettingMinutes = !isSettingMinutes;
+
+  resetDisplay();
+  
+  int x;
+  char text[2];
+  if(isSettingHours) {
+    LedSign::Clear();
+    itoa(hours,text,10);
+    x = Font_Draw(text[0],0,0,MAXBRIGHT);
+    Font_Draw(text[1],x-1,0,MAXBRIGHT);
+    delay(10);
+  }
+  else {
+    LedSign::Clear();
+    itoa(minutes,text,10);
+    x = Font_Draw(text[0],0,0,MAXBRIGHT);
+    Font_Draw(text[1],x-1,0,MAXBRIGHT);
+    delay(10);
+  }
+}
+
+//-----------------------------------------------------------
+void processIncButton() {
+  if((hours > 23) or (minutes > 59)) {
+    updateTimeBuffer();
+  }
+
+  // debouncing;
+  if (abs(millis() - lastButtonTime) < BOUNCE_TIME_BUTTON)
+    return;
+
+  lastButtonTime = millis();
+
+  if (isSettingHours) {
+    hours++;
+    if (hours > 23) hours = 0;
+  }
+  else {
+    minutes++;
+    if (minutes > 59) minutes = 0;
+  }
+
+  int x;
+  char text[2];
+  if(isSettingHours) {
+    LedSign::Clear();
+    itoa(hours,text,10);
+    x = Font_Draw(text[0],0,0,MAXBRIGHT);
+    Font_Draw(text[1],x-1,0,MAXBRIGHT);
+    delay(10);
+  }
+  else {
+    LedSign::Clear();
+    itoa(minutes,text,10);
+    x = Font_Draw(text[0],0,0,MAXBRIGHT);
+    Font_Draw(text[1],x-1,0,MAXBRIGHT);
+    delay(10);
+  }
+}
+
 void LightAll (unsigned long now, unsigned long runtime) {
   while(1) {
-    for(int y=0; y<=4; y++) {
-      for(int x=0; x<=5; x++) {
+    for(int y = 0; y < ROWS; y++) {
+      for(int x = 0; x < COLS; x++) {
 	if(millis() > (now+runtime)) {
 	  return;
 	}
@@ -94,8 +251,8 @@ void LightAll (unsigned long now, unsigned long runtime) {
 
 void VertSweeps(unsigned long now, unsigned long runtime) {
   while(1) {
-    for(int x=0; x<=6; x++) {
-      for(int y=0; y<=4; y++) {
+    for(int x = 0; x < COLS+1; x++) { // +1 so I can draw off the right hand side
+      for(int y = 0; y < ROWS; y++) {
 	if(millis() > (now+runtime)) {
 	  return;
 	}
@@ -109,8 +266,8 @@ void VertSweeps(unsigned long now, unsigned long runtime) {
 
 void HorizSweeps(unsigned long now, unsigned long runtime) {
   while(1) {
-    for(int y=0; y<=4; y++) {
-      for(int x=0; x<=6; x++) {
+    for(int y=0; y < ROWS; y++) {
+      for(int x=0; x < COLS+1; x++) { 
 	if(millis() > (now+runtime)) {
 	  return;
 	}
@@ -128,8 +285,8 @@ void Rain(unsigned long now, unsigned long runtime) {
       return;
     }
     // move everything down one row
-    for(int y=0; y<=4; y++) {
-      for(int x=0; x<=5; x++) {
+    for(int y = 0; y < ROWS; y++) {
+      for(int x = 0; x < COLS; x++) {
 	if(world[x][y][0] > 0) { // if there's a value in the current frame, copy it to the next frame, 1 row down
 	  world[x][y+1][1] = world[x][y][0]; 
 	}
@@ -139,7 +296,7 @@ void Rain(unsigned long now, unsigned long runtime) {
       }
     }
     // fill in the now vacant top row with random lights
-    for(int x = 0; x<=5; x++) {
+    for(int x = 0; x < COLS; x++) {
       if(random(100) > 50) { 
 	world[x][0][1] = random(MAXBRIGHT);
       }
@@ -157,23 +314,17 @@ void Breathe(unsigned long now, unsigned long runtime) {
     if(millis() > (now+runtime)) {
       return;
     }
-    for(int y=0; y<=4; y++) { for(int x=0; x<=5; x++) { world[x][y][1] = MAXBRIGHT; } }
-    if(millis() > (now+runtime)) {
-      return;
-    }
+    for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = MAXBRIGHT; } }
+    if(millis() > (now+runtime)) { return; }
     
     fade_to_next_frame(35);
     delay(300); 
-    if(millis() > (now+runtime)) {
-      return;
-    }
+    if(millis() > (now+runtime)) { return;  }
     
-    for(int y=0; y<=4; y++) { for(int x=0; x<=5; x++) { world[x][y][1] = 0; } }
+    for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = 0; } }
     
     fade_to_next_frame(35);
-    if(millis() > (now+runtime)) {
-      return;
-    }
+    if(millis() > (now+runtime)) { return; }
     delay(300); 
   }
 }
@@ -184,8 +335,8 @@ void fade_to_next_frame(int speed) {
 
   while(1) {
     changes = 0;
-    for(y=0; y<=4; y++) {
-      for(x=0; x<=5; x++) {
+    for(y = 0; y < ROWS; y++) {
+      for(x = 0; x < COLS; x++) {
 	if( world[x][y][0] < world[x][y][1] ) {
 	  world[x][y][0]++;
 	  changes++;
@@ -211,49 +362,12 @@ void fade_to_next_frame(int speed) {
 // Draws the current data in world[0].
 void draw_frame (void) {
   char x, y;
-  for(y=0; y<=4; y++) {
-    for(x=0; x<=5; x++) {
+  for(y=0; y < ROWS; y++) {
+    for(x=0; x < COLS; x++) {
       LedSign::Set(x,y,world[x][y][0]);
     }
   }
 }
-
-void ReadButtons() {
-  bool button0State = digitalRead(A0);  
-  bool button1State = digitalRead(A1);
-
-  Serial.println(button0State, DEC);
-  Serial.println(button1State, DEC);
-
-  if(button0State == 0) { // setting mode!
-    int setting_xpos;
-    Banner("SET", 100);
-    
-    RTC.readClock();
-    
-    char hour[2];
-    itoa(RTC.getHours(), hour, 10);
-    
-    while(1) {
-      setting_xpos = Font_Draw(hour[0],0,0,7);
-      setting_xpos = Font_Draw(hour[1],(setting_xpos),0,7);
-      delay(100);
-      LedSign::Clear();
-      delay(100);
-      bool button0State = digitalRead(A0);
-      bool button1State = digitalRead(A1);
-      if(button0State == 0) {
-	break;
-      }
-      else if (button1State == 0) {
-	hour[1]++;
-      }
-    }
-    
-  }
-
-}
-		 
 
 /** Writes an array to the display
  * @param str is the array to display
@@ -283,7 +397,7 @@ void Banner ( char* str, int speed ) {
   // j is the virtual display width from the actual rightmost column to a 
   // virtual column off the left hand side.  Decrements, so the scroll goes
   // to the left.
-  for(int8_t j=5; j>=-(width+5); j--) { 
+  for(int8_t j=5; j>=-(width+5); j--) {  // FIXME: this might need fixing for wider arrays 
     // x starts out at j (which is always moving to the left, remember)
     x=j; 
     // clear the sign
@@ -327,9 +441,9 @@ uint8_t Font_Draw(unsigned char letter,int x,int y,int set) {
   while (charRow != 9) { // the terminal 9 ends the font element.
     if (charCol>maxx) maxx=charCol; // increment the maximum column count
     if ( // if the resulting pixel would be onscreen, send it to LedSign::Set.
-	charCol + x < 6 && 
+	charCol + x < COLS && 
 	charCol + x >= 0 && 
-	charRow + y < 5 && 
+	charRow + y < ROWS && 
 	charRow + y >= 0
 	) {
       LedSign::Set(charCol + x, charRow + y, set);
