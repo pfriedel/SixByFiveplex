@@ -6,7 +6,6 @@
 #include "Charliplexing.h"
 #include <Wire.h>
 #include "RealTimeClockDS1307.h"
-#include <stdio.h>
 #include "tinyfont.h" // font is hiding in here.
 
 //#include <String.h>;
@@ -18,7 +17,7 @@
 #define ROWS 5 // usually y
 
 // are your LEDs a little obnoxious at full brightness?
-int MAXBRIGHT=4;
+#define MAXBRIGHT 7
 
 byte world[COLS][ROWS][2]; // Create a double buffered world.
 
@@ -28,7 +27,7 @@ int minutes;
 boolean isSettingHours   = true;
 boolean isSettingMinutes = false;
 
-#define BOUNCE_TIME_BUTTON  300   // bounce time in ms for the menu button;
+#define BOUNCE_TIME_BUTTON  300   // bounce time in ms for the menu button - too short and every click is an adventure, too long and it's ponderous.
 
 // last time a button was pushed; used for debouncing;
 volatile unsigned long lastButtonTime = 0;
