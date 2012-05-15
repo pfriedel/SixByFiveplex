@@ -103,6 +103,8 @@ void loop() {
     resetDisplay();
   }
   else {
+    Banner(timeBuffer, 100);
+
     //clear the current world of whatever had been in it.
     for(int y = 0; y < ROWS; y++) { for(int x = 0; x < COLS; x++) { world[x][y][0] = 0; world[x][y][1] = 0; } }
     
@@ -127,7 +129,6 @@ void loop() {
       break;
     }
     
-    Banner(timeBuffer, 100);
   }
 }
 
@@ -262,7 +263,7 @@ void LightAll (unsigned long now, unsigned long runtime) {
 	  return;
 	}
 	world[x][y][1] = MAXBRIGHT;
-	fade_to_next_frame(30);
+	fade_to_next_frame(100/MAXBRIGHT);
 	world[x][y][1] = 0;
       }
     }
@@ -279,7 +280,7 @@ void VertSweeps(unsigned long now, unsigned long runtime) {
 	world[x][y][1] = MAXBRIGHT;
 	world[x-1][y][1]=0;
       }
-      fade_to_next_frame(30);
+      fade_to_next_frame(100/MAXBRIGHT);
     }
   }
 }
@@ -294,12 +295,13 @@ void HorizSweeps(unsigned long now, unsigned long runtime) {
 	world[x][y][1] = MAXBRIGHT;
 	world[x][y-1][1] = 0;
       }
-      fade_to_next_frame(30);
+      fade_to_next_frame(100/MAXBRIGHT);
     }
   }
 }
 
 void Rain(unsigned long now, unsigned long runtime) {
+  int density = random(20,80);
   while(1) {
     if(millis() > (now+runtime)) { // get out of rain eventually.
       return;
@@ -317,7 +319,7 @@ void Rain(unsigned long now, unsigned long runtime) {
     }
     // fill in the now vacant top row with random lights
     for(int x = 0; x < COLS; x++) {
-      if(random(100) > 50) { 
+      if(random(100) > density) { 
 	world[x][0][1] = random(MAXBRIGHT);
       }
       else {
@@ -325,7 +327,7 @@ void Rain(unsigned long now, unsigned long runtime) {
       }
     }
     // draw the changes - after this world[0] will be identical to world[1], so keep that in mind.
-    fade_to_next_frame(20);
+    fade_to_next_frame(80/MAXBRIGHT);
   }
 }
 
@@ -337,13 +339,13 @@ void Breathe(unsigned long now, unsigned long runtime) {
     for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = MAXBRIGHT; } }
     if(millis() > (now+runtime)) { return; }
     
-    fade_to_next_frame(35);
+    fade_to_next_frame(160/MAXBRIGHT);
     delay(300); 
     if(millis() > (now+runtime)) { return;  }
     
     for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = 0; } }
     
-    fade_to_next_frame(35);
+    fade_to_next_frame(160/MAXBRIGHT);
     if(millis() > (now+runtime)) { return; }
     delay(300); 
   }
