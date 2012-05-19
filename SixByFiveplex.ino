@@ -16,10 +16,11 @@
 #define COLS 6 // usually x
 #define ROWS 5 // usually y
 
-// are your LEDs a little obnoxious at full brightness?
+// are your LEDs a little obnoxious at full brightness? 2 seems to be the workable minimum, some animations break at 1.
 int MAXBRIGHT=7;
 
 byte world[COLS][ROWS][2]; // Create a double buffered world.
+byte frame_log[COLS][ROWS];
 
 int hours;
 int minutes;
@@ -63,9 +64,6 @@ void setup() {
 void loop() {
   // check SET button;
   if (digitalRead(SET_BUTTON_PIN) == 0) {
-//    if(!isSettingTime) {
-//      Banner("SET", 100);
-//    }
     // "Set time" button was pressed;
     processSetButton();
   }
@@ -82,19 +80,11 @@ void loop() {
   
   // display the menu option for 5 seconds after menu button was pressed;
   if ((lastButtonTime > 0) && (millis() - lastButtonTime < 5000)) {
-    return;
+    return; // avoids hitting the next conditional.
   }
   
   // return the main mode if no button was pressed for 5 seconds;
   if (isSettingTime) {
-//    for(int repeat=0; repeat<2; repeat++) { // 2 flashes to ack going back to normal mode
-//      for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = MAXBRIGHT; } }
-//      fade_to_next_frame(15);
-//      delay(300); 
-//      for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = 0; } }
-//      fade_to_next_frame(15);
-//    }
-
     // just finished setting up the time;
     isSettingTime = false;
     
@@ -110,30 +100,169 @@ void loop() {
     
     unsigned long now=millis();
     
-    //  ReadButtons(); 
-    switch(random(4)) {
+    switch(random(2)) {
     case 0:
       Rain(now,5000);
       break;
     case 1:
-      Breathe(now,5000);
-      break;
-    case 2:
-      VertSweeps(now,5000);
-      break;
-    case 3:
-      HorizSweeps(now,5000);
-      break;
-    case 4:
-      LightAll(now,5000);
+      Life();
       break;
     }
-    
   }
 }
 
 //--------------------------------------------------------------------------------
 // functions
+
+void initialize_frame_log() {
+  for(int y=0; y < ROWS; y++) {
+    for(int x=0; x < COLS; x++) {
+      frame_log[x][y] = -1;
+    }
+  }
+}
+void log_current_frame() {
+  for(int y=0; y < ROWS; y++) {
+    for(int x=0; x < COLS; x++) {
+      frame_log[x][y] = world[x][y][0];
+    }
+  }
+}
+
+void set_random_next_frame(void) {
+  // blank out the world
+  resetDisplay();
+  
+  int density = random(20,80);
+  
+  for(int y=0; y<ROWS; y++) {
+    for(int x=0; x<COLS; x++) {
+      if(random(100) > density) {
+	world[x][y][1] = MAXBRIGHT;
+      }
+    }
+  }
+}
+
+char current_equals_next() {
+  char x, y;
+  for(y=0; y<ROWS; y++) {
+    for(x=0; x<COLS; x++) {
+      if( world[x][y][0] != world[x][y][1] ) {
+	return 0;
+      }
+    }
+  }
+  return 1;
+}
+
+
+
+
+void Life() {
+    int frame_number;
+    initialize_frame_log();
+
+    // flash the screen
+    for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = MAXBRIGHT; } }
+    fade_to_next_frame(int(200/MAXBRIGHT));
+    delay(300); 
+    for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = 0; } }
+    fade_to_next_frame(int(200/MAXBRIGHT));
+    delay(300); 
+    
+    set_random_next_frame();
+    fade_to_next_frame(int(200/MAXBRIGHT));
+    delay(500);
+
+    while(1) {
+      if( frame_number == 0 ) { log_current_frame(); }
+
+      generate_next_generation();
+
+      if( current_equals_next() == 1 ) {
+	for(int f=0; f<1500; f++) {
+	  draw_frame();
+	}
+	break;
+      }
+
+      // frame logging will prevent a blinker from going forever.
+//      if( next_equals_logged_frame() == 1 ) {
+//	fade_to_next_frame(int(200/MAXBRIGHT));
+//	for(int f = 0; f<FRAME_DELAY; f++) {
+//	  draw_frame();
+//	}
+//	break;
+//      }
+
+      fade_to_next_frame(50);
+      delay(500);
+      frame_number++;
+
+      if(frame_number == 20 ) {
+	frame_number = 0;
+      }
+      
+    }
+}
+
+
+void generate_next_generation(void){  //looks at current generation, writes to next generation array                                                    
+  char x,y, neighbors;
+  for ( y=0; y<ROWS; y++ ) {
+    for ( x=0; x<COLS; x++ ) {
+      //count the number of current neighbors - currently planar.  I'd love to make it toroidal.                                                        
+      neighbors = 0;
+      if( get_led_xy((x-1),(y-1)) > 0 ) { neighbors++; } //NW                                                                                       
+      if( get_led_xy(( x ),(y-1)) > 0 ) { neighbors++; } //N                                                                                        
+      if( get_led_xy((x+1),(y-1)) > 0 ) { neighbors++; } //NE                                                                                       
+      if( get_led_xy((x-1),( y )) > 0 ) { neighbors++; } //W                                                                                        
+      if( get_led_xy((x+1),( y )) > 0 ) { neighbors++; } //E                                                                                        
+      if( get_led_xy((x-1),(y+1)) > 0 ) { neighbors++; } //SW                                                                                       
+      if( get_led_xy(( x ),(y+1)) > 0 ) { neighbors++; } //S                                                                                        
+      if( get_led_xy((x+1),(y+1)) > 0 ) { neighbors++; } //SE                                                                                       
+
+      if( world[x][y][0] > 0 ){
+        //current cell is alive                                                                                                                         
+        if( neighbors < 2 ){
+          //Any live cell with fewer than two live neighbours dies, as if caused by under-population.                                                   
+          world[x][y][1] = 0;
+        }
+        if( (neighbors == 2) || (neighbors == 3) ){
+          //Any live cell with two or three live neighbours lives on to the next generation.                                                            
+
+          world[x][y][1] = MAXBRIGHT;
+        }
+        if( neighbors > 3 ){
+          //Any live cell with more than three live neighbours dies, as if by overcyding.                                                             
+          world[x][y][1] = 0;
+        }
+
+      }
+      else {
+        //current cell is dead                                                                                                                          
+        if( neighbors == 3 ){
+          // Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.                                               
+          world[x][y][1] = MAXBRIGHT;
+	  
+        }
+        else {
+          //stay dead for next generation                                                                                                               
+          world[x][y][1] = 0;
+        }
+      }
+    }
+  }
+}
+
+char get_led_xy (char col, char row) {
+  if(col < 0 | col > COLS-1) { return 0; }
+  if(row < 0 | row > ROWS-1) { return 0;  }
+  return world[col][row][0];
+}
+
+
 
 void setTime() {
   
@@ -280,7 +409,10 @@ void VertSweeps(unsigned long now, unsigned long runtime) {
 	world[x][y][1] = MAXBRIGHT;
 	world[x-1][y][1]=0;
       }
-      fade_to_next_frame(100/MAXBRIGHT);
+      // MAXBRIGHT=2 = 5(ish)
+      // MAXBRIGHT=4 = 6(ish)
+      // MAXBRIGHT=7 = 7(ish)
+      fade_to_next_frame(int((1000/COLS)/MAXBRIGHT)); // hrm.
     }
   }
 }
@@ -339,13 +471,13 @@ void Breathe(unsigned long now, unsigned long runtime) {
     for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = MAXBRIGHT; } }
     if(millis() > (now+runtime)) { return; }
     
-    fade_to_next_frame(160/MAXBRIGHT);
+    fade_to_next_frame(int(200/MAXBRIGHT));
     delay(300); 
     if(millis() > (now+runtime)) { return;  }
     
     for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = 0; } }
     
-    fade_to_next_frame(160/MAXBRIGHT);
+    fade_to_next_frame(int(200/MAXBRIGHT));
     if(millis() > (now+runtime)) { return; }
     delay(300); 
   }
