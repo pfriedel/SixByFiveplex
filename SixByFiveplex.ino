@@ -156,9 +156,6 @@ char current_equals_next() {
   return 1;
 }
 
-
-
-
 void Life() {
     int frame_number;
     initialize_frame_log();
@@ -261,8 +258,6 @@ char get_led_xy (char col, char row) {
   if(row < 0 | row > ROWS-1) { return 0;  }
   return world[col][row][0];
 }
-
-
 
 void setTime() {
   
@@ -384,59 +379,12 @@ void processIncButton() {
   }
 }
 
-void LightAll (unsigned long now, unsigned long runtime) {
-  while(1) {
-    for(int y = 0; y < ROWS; y++) {
-      for(int x = 0; x < COLS; x++) {
-	if(millis() > (now+runtime)) {
-	  return;
-	}
-	world[x][y][1] = MAXBRIGHT;
-	fade_to_next_frame(100/MAXBRIGHT);
-	world[x][y][1] = 0;
-      }
-    }
-  }
-}
-
-void VertSweeps(unsigned long now, unsigned long runtime) {
-  while(1) {
-    for(int x = 0; x < COLS+1; x++) { // +1 so I can draw off the right hand side
-      for(int y = 0; y < ROWS; y++) {
-	if(millis() > (now+runtime)) {
-	  return;
-	}
-	world[x][y][1] = MAXBRIGHT;
-	world[x-1][y][1]=0;
-      }
-      // MAXBRIGHT=2 = 5(ish)
-      // MAXBRIGHT=4 = 6(ish)
-      // MAXBRIGHT=7 = 7(ish)
-      fade_to_next_frame(int((1000/COLS)/MAXBRIGHT)); // hrm.
-    }
-  }
-}
-
-void HorizSweeps(unsigned long now, unsigned long runtime) {
-  while(1) {
-    for(int y=0; y < ROWS; y++) {
-      for(int x=0; x < COLS+1; x++) { 
-	if(millis() > (now+runtime)) {
-	  return;
-	}
-	world[x][y][1] = MAXBRIGHT;
-	world[x][y-1][1] = 0;
-      }
-      fade_to_next_frame(100/MAXBRIGHT);
-    }
-  }
-}
-
 void Rain(unsigned long now, unsigned long runtime) {
   int density = random(20,80);
+  int stopraining = 0;
   while(1) {
     if(millis() > (now+runtime)) { // get out of rain eventually.
-      return;
+      stopraining++;
     }
     // move everything down one row
     for(int y = 0; y < ROWS; y++) {
@@ -451,8 +399,16 @@ void Rain(unsigned long now, unsigned long runtime) {
     }
     // fill in the now vacant top row with random lights
     for(int x = 0; x < COLS; x++) {
-      if(random(100) > density) { 
-	world[x][0][1] = random(MAXBRIGHT);
+      if(stopraining < ROWS+1) {
+	if(random(100) > density) { 
+	  world[x][0][1] = random(MAXBRIGHT);
+	}
+	else {
+	  world[x][0][1] = 0;
+	}
+      }
+      else if(stopraining >= ROWS*COLS) {
+	return;
       }
       else {
 	world[x][0][1] = 0;
