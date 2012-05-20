@@ -48,7 +48,7 @@ void setup() {
   LedSign::Init(GRAYSCALE);  //Initializes the screen
   Wire.begin();
 
-  //  Serial.begin(9600);
+  Serial.begin(9600);
 
   pinMode(SET_BUTTON_PIN, INPUT); // A0
   pinMode(INC_BUTTON_PIN, INPUT); // A1
@@ -134,14 +134,25 @@ void set_random_next_frame(void) {
   resetDisplay();
   
   int density = random(20,80);
+
+  Serial.print("Initial density: ");
+  Serial.println(density);
   
   for(int y=0; y<ROWS; y++) {
     for(int x=0; x<COLS; x++) {
       if(random(100) > density) {
+	Serial.print(x);
+	Serial.print(" ");
+	Serial.print(y);
+	Serial.print(" ");
+	Serial.println("on");
 	world[x][y][1] = MAXBRIGHT;
       }
     }
   }
+//  world[1][1][1] = MAXBRIGHT;
+//  world[2][1][1] = MAXBRIGHT;
+//  world[3][1][1] = MAXBRIGHT;
 }
 
 char current_equals_next() {
@@ -156,52 +167,74 @@ char current_equals_next() {
   return 1;
 }
 
-void Life() {
-    int frame_number;
-    initialize_frame_log();
-
-    // flash the screen
-    for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = MAXBRIGHT; } }
-    fade_to_next_frame(int(200/MAXBRIGHT));
-    delay(300); 
-    for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = 0; } }
-    fade_to_next_frame(int(200/MAXBRIGHT));
-    delay(300); 
-    
-    set_random_next_frame();
-    fade_to_next_frame(int(200/MAXBRIGHT));
-    delay(500);
-
-    while(1) {
-      if( frame_number == 0 ) { log_current_frame(); }
-
-      generate_next_generation();
-
-      if( current_equals_next() == 1 ) {
-	for(int f=0; f<1500; f++) {
-	  draw_frame();
-	}
-	break;
+int next_equals_logged_frame(){
+  for(int y = 0; y<ROWS; y++) {
+    for(int x = 0; x<COLS; x++) {
+      if(world[x][y][1] != frame_log[x][y] ) {
+	return 0;
       }
-
-      // frame logging will prevent a blinker from going forever.
-//      if( next_equals_logged_frame() == 1 ) {
-//	fade_to_next_frame(int(200/MAXBRIGHT));
-//	for(int f = 0; f<FRAME_DELAY; f++) {
-//	  draw_frame();
-//	}
-//	break;
-//      }
-
-      fade_to_next_frame(50);
-      delay(500);
-      frame_number++;
-
-      if(frame_number == 20 ) {
-	frame_number = 0;
-      }
-      
     }
+  }
+  return 1;
+}
+
+void Life() {
+  int frame_number, generation;
+  frame_number = 0;
+  generation = 0;
+  initialize_frame_log(); // blank out the frame_log world
+  
+  // flash the screen
+  for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = MAXBRIGHT; } }
+  fade_to_next_frame(int(200/MAXBRIGHT));
+  delay(300); 
+  for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = 0; } }
+  fade_to_next_frame(int(200/MAXBRIGHT));
+  delay(300); 
+  
+  // draw the initial generation
+  set_random_next_frame();
+  fade_to_next_frame(int(200/MAXBRIGHT));
+  delay(500);
+  
+  while(1) {
+    // Log every 20th frame to monitor for repeats
+    if( frame_number == 0 ) { log_current_frame(); }
+    
+    // generate the next generation
+    generate_next_generation();
+    
+    // if there are no changes between the current generation and the next generation (still life), break out of the loop.
+    if( current_equals_next() == 1 ) {
+      Serial.println("Death due to still life.");
+      for(int f=0; f<1500; f++) {
+	draw_frame();
+      }
+      break;
+    }
+    
+    // If the next frame is the same as a frame from 20 generations ago, we're in a loop.
+    if( next_equals_logged_frame() == 1 ) {
+      Serial.println("Death due to oscillator.");
+      fade_to_next_frame(50);
+      for(int f = 0; f<1500; f++) {
+	draw_frame();
+      }
+      break;
+    }
+    
+    // Otherwise, fade to the next generation
+    fade_to_next_frame(50);
+    delay(500);
+    frame_number++;
+    generation++;
+    
+    Serial.println(generation);
+    
+    if(frame_number == 20 ) {
+      frame_number = 0;
+    }
+  }
 }
 
 
