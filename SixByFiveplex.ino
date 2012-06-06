@@ -8,8 +8,6 @@
 #include "RealTimeClockDS1307.h"
 #include "tinyfont.h" // font is hiding in here.
 
-//#include <String.h>;
-
 #define SET_BUTTON_PIN 14
 #define INC_BUTTON_PIN 15
 
@@ -41,7 +39,7 @@ boolean isDisplayingTime  = true;
 boolean isDisplayingQuote = false;
 
 // buffer for time display;
-char timeBuffer[]   = "12:45";
+char timeBuffer[]   = "12:34";
 
 //--------------------------------------------------------------------------------
 void setup() {
@@ -59,6 +57,7 @@ void setup() {
   RTC.readClock();
   randomSeed(RTC.getSeconds());
   updateTimeBuffer();
+  RTC.sqwEnable(RTC.SQW_1Hz);
 }
 
 void loop() {
@@ -93,7 +92,6 @@ void loop() {
     resetDisplay();
   }
   else {
-    Banner(timeBuffer, 100);
 
     //clear the current world of whatever had been in it.
     for(int y = 0; y < ROWS; y++) { for(int x = 0; x < COLS; x++) { world[x][y][0] = 0; world[x][y][1] = 0; } }
@@ -108,6 +106,9 @@ void loop() {
       Life();
       break;
     }
+
+    updateTimeBuffer();
+    Banner(timeBuffer, 100);
   }
 }
 
@@ -133,7 +134,7 @@ void set_random_next_frame(void) {
   // blank out the world
   resetDisplay();
   
-  int density = random(20,80);
+  int density = random(40,80);
 
   Serial.print("Initial density: ");
   Serial.println(density);
@@ -184,18 +185,18 @@ void Life() {
   generation = 0;
   initialize_frame_log(); // blank out the frame_log world
   
-  // flash the screen
+  // flash the screen - ~1000msec
   for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = MAXBRIGHT; } }
   fade_to_next_frame(int(200/MAXBRIGHT));
   delay(300); 
   for(int y=0; y < ROWS; y++) { for(int x=0; x < COLS; x++) { world[x][y][1] = 0; } }
   fade_to_next_frame(int(200/MAXBRIGHT));
   delay(300); 
-  
+
   // draw the initial generation
   set_random_next_frame();
   fade_to_next_frame(int(200/MAXBRIGHT));
-  delay(500);
+  delay(150);
   
   while(1) {
     // Log every 20th frame to monitor for repeats
@@ -223,9 +224,10 @@ void Life() {
       break;
     }
     
+    // ~ 500msec per generation.
     // Otherwise, fade to the next generation
-    fade_to_next_frame(50);
-    delay(500);
+    fade_to_next_frame(int(350/MAXBRIGHT));
+    delay(150);
     frame_number++;
     generation++;
     
